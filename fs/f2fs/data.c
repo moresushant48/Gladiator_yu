@@ -840,15 +840,6 @@ int f2fs_fiemap(struct inode *inode, struct fiemap_extent_info *fieinfo,
 	if (logical_to_blk(inode, len) == 0)
 		len = blk_to_logical(inode, 1);
 
-static int get_data_block_ro_bmap(struct inode *inode, sector_t iblock,
-			struct buffer_head *bh_result, int create)
-{
-	/* Block number less than F2FS MAX BLOCKS */
-	if (unlikely(iblock >= max_file_size(0)))
-		return -EFBIG;
-	return get_data_block_ro(inode, iblock, bh_result, create, false);
-}
-
 /*
  * This function should be used by the data read flow only where it
  * does not check the "create" flag that indicates block allocation.
@@ -1064,6 +1055,15 @@ next_page:
 	if (bio)
 		submit_bio(READ, bio);
 	return 0;
+}
+
+static int get_data_block_bmap(struct inode *inode, sector_t iblock,
+			struct buffer_head *bh_result, int create)
+{
+	/* Block number less than F2FS MAX BLOCKS */
+	if (unlikely(iblock >= max_file_size(0)))
+		return -EFBIG;
+	return get_data_block_ro(inode, iblock, bh_result, create);
 }
 
 static int f2fs_read_data_page(struct file *file, struct page *page)
@@ -1802,7 +1802,7 @@ static int f2fs_set_data_page_dirty(struct page *page)
 
 static sector_t f2fs_bmap(struct address_space *mapping, sector_t block)
 {
-	return generic_block_bmap(mapping, block, get_data_block_ro_bmap);
+	return generic_block_bmap(mapping, block, get_data_block_bmap);
 }
 
 const struct address_space_operations f2fs_dblock_aops = {
