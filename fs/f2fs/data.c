@@ -840,20 +840,8 @@ int f2fs_fiemap(struct inode *inode, struct fiemap_extent_info *fieinfo,
 	if (logical_to_blk(inode, len) == 0)
 		len = blk_to_logical(inode, 1);
 
-/*
- * This function should be used by the data read flow only where it
- * does not check the "create" flag that indicates block allocation.
- * The reason for this special functionality is to exploit VFS readahead
- * mechanism.
- */
-static int get_data_block_ro(struct inode *inode, sector_t iblock,
-			struct buffer_head *bh_result, int create)
-{
-	unsigned int blkbits = inode->i_sb->s_blocksize_bits;
-	unsigned maxblocks = bh_result->b_size >> blkbits;
-	struct dnode_of_data dn;
-	pgoff_t pgofs;
-	int err;
+	start_blk = logical_to_blk(inode, start);
+	last_blk = logical_to_blk(inode, start + len - 1);
 
 next:
 	memset(&map_bh, 0, sizeof(struct buffer_head));
@@ -1802,6 +1790,14 @@ static int f2fs_set_data_page_dirty(struct page *page)
 
 static sector_t f2fs_bmap(struct address_space *mapping, sector_t block)
 {
+	struct inode *inode = mapping->host;
+
+	if (f2fs_has_inline_data(inode))
+		return 0;
+
+	/* make sure allocating whole blocks */
+	if (mapping_tagged(mapping, PAGECACHE_TAG_DIRTY))
+		filemap_write_and_wait(mapping);
 	return generic_block_bmap(mapping, block, get_data_block_bmap);
 }
 
