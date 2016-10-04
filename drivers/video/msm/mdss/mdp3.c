@@ -909,19 +909,11 @@ static int mdp3_check_version(void)
 {
 	int rc;
 
-	rc = mdp3_footswitch_ctrl(1);
-	if (rc) {
-		pr_err("unable to turn on FS\n");
-		return rc;
-	}
-
 	rc = mdp3_clk_update(MDP3_CLK_AHB, 1);
 	rc |= mdp3_clk_update(MDP3_CLK_AXI, 1);
 	rc |= mdp3_clk_update(MDP3_CLK_MDP_CORE, 1);
-	if (rc) {
-		mdp3_footswitch_ctrl(0);
+	if (rc)
 		return rc;
-	}
 
 	mdp3_res->mdp_rev = MDP3_REG_READ(MDP3_REG_HW_VERSION);
 
@@ -930,10 +922,6 @@ static int mdp3_check_version(void)
 	rc |= mdp3_clk_update(MDP3_CLK_MDP_CORE, 0);
 	if (rc)
 		pr_err("fail to turn off the MDP3_CLK_AHB clk\n");
-
-	rc = mdp3_footswitch_ctrl(0);
-	if (rc)
-		pr_err("unable to turn off FS\n");
 
 	if (mdp3_res->mdp_rev != MDP_CORE_HW_VERSION) {
 		pr_err("mdp_hw_revision=%x mismatch\n", mdp3_res->mdp_rev);
